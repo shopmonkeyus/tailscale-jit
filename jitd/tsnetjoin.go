@@ -71,3 +71,16 @@ func nodeJoined(dir string) (bool, error) {
 	}
 	return len(profiles) > 0, nil
 }
+
+// withoutEnv runs fn with the variables keys unset, and sets them back
+// afterwards. It changes the process environment, so only call it while
+// nothing else runs.
+func withoutEnv[T any](keys []string, fn func() (T, error)) (T, error) {
+	for _, k := range keys {
+		if v, set := os.LookupEnv(k); set {
+			os.Unsetenv(k)
+			defer os.Setenv(k, v)
+		}
+	}
+	return fn()
+}

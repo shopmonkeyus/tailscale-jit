@@ -23,6 +23,7 @@ import (
 	"syscall"
 	"time"
 
+	"tailscale.com/ipn/ipnstate"
 	"tailscale.com/tsnet"
 
 	"github.com/atoonk/tailscale-jit/jitd/internal/google"
@@ -330,7 +331,12 @@ func main() {
 		os.Exit(1)
 	}
 	log.Info("starting tsnet node", "hostname", *hostname, "state_dir", *stateDir, "auth_key_set", os.Getenv("TS_AUTHKEY") != "", "federated_identity", federated)
-	st, err := srv.Up(ctx)
+	// tsnet reads TS_ID_TOKEN from the environment when IDToken is empty,
+	// and then fails without a client ID (a node that has already joined)
+	// or on a "file:" value. jitd's token is for its API client and is
+	// handed to tsnet by federatedJoin when the node joins, so tsnet never
+	// sees the variable. Nothing else runs yet.
+	st, err := withoutEnv([]string{"TS_ID_TOKEN"}, func() (*ipnstate.Status, error) { return srv.Up(ctx) })
 	if err != nil {
 		log.Error("tsnet up", "err", err)
 		os.Exit(1)

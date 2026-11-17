@@ -115,3 +115,22 @@ func TestFederatedJoinSkipsJoinedNode(t *testing.T) {
 		t.Fatalf("federatedJoin = %v, %v; server %+v", got, err, srv)
 	}
 }
+
+func TestWithoutEnv(t *testing.T) {
+	t.Setenv("JITD_TEST_HIDDEN", "file:/token")
+	got, err := withoutEnv([]string{"JITD_TEST_HIDDEN", "JITD_TEST_UNSET"}, func() (string, error) {
+		if _, set := os.LookupEnv("JITD_TEST_UNSET"); set {
+			t.Error("JITD_TEST_UNSET is set")
+		}
+		return os.Getenv("JITD_TEST_HIDDEN"), nil
+	})
+	if err != nil || got != "" {
+		t.Fatalf("inside: %q, %v; want the variable unset", got, err)
+	}
+	if v := os.Getenv("JITD_TEST_HIDDEN"); v != "file:/token" {
+		t.Fatalf("after: %q, want it set back", v)
+	}
+	if _, set := os.LookupEnv("JITD_TEST_UNSET"); set {
+		t.Fatal("JITD_TEST_UNSET was set afterwards")
+	}
+}
