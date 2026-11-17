@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"slices"
@@ -60,59 +59,6 @@ func TestFederatedJoin(t *testing.T) {
 				t.Errorf("AdvertiseTags = %v", srv.AdvertiseTags)
 			}
 		})
-	}
-}
-
-func writeState(t *testing.T, dir string, state map[string][]byte) {
-	t.Helper()
-	b, err := json.Marshal(state)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(dir, "tailscaled.state"), b, 0o600); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestNodeJoined(t *testing.T) {
-	cases := []struct {
-		name  string
-		state map[string][]byte // nil: no state file
-		want  bool
-	}{
-		{name: "no state file"},
-		{name: "needs login", state: map[string][]byte{"_machinekey": []byte("privkey:x")}},
-		{name: "empty profiles", state: map[string][]byte{"_profiles": []byte("{}")}},
-		{name: "logged in", state: map[string][]byte{
-			"_machinekey":      []byte("privkey:x"),
-			"_current-profile": []byte("profile-1234"),
-			"_profiles":        []byte(`{"1234":{"ID":"1234","Name":"tag:jit"}}`),
-		}, want: true},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			dir := t.TempDir()
-			if tc.state != nil {
-				writeState(t, dir, tc.state)
-			}
-			got, err := nodeJoined(dir)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if got != tc.want {
-				t.Fatalf("nodeJoined = %v, want %v", got, tc.want)
-			}
-		})
-	}
-}
-
-func TestFederatedJoinSkipsJoinedNode(t *testing.T) {
-	dir := t.TempDir()
-	writeState(t, dir, map[string][]byte{"_profiles": []byte(`{"1234":{"ID":"1234"}}`)})
-	srv := &tsnet.Server{Dir: dir}
-	got, err := federatedJoin(srv, "tag:jit", envOf(map[string]string{"TS_OAUTH_CLIENT_ID": "cid", "TS_ID_TOKEN": "jwt"}))
-	if err != nil || got || srv.ClientID != "" || srv.IDToken != "" {
-		t.Fatalf("federatedJoin = %v, %v; server %+v", got, err, srv)
 	}
 }
 

@@ -1,12 +1,7 @@
 package main
 
 import (
-	"encoding/json"
-	"errors"
-	"fmt"
-	"io/fs"
 	"os"
-	"path/filepath"
 
 	_ "tailscale.com/feature/identityfederation"
 	"tailscale.com/tsnet"
@@ -14,25 +9,26 @@ import (
 	"github.com/atoonk/tailscale-jit/jitd/internal/tsapi"
 )
 
-// federatedJoin lets a new jitd node join the tailnet through the same
+// federatedJoin lets jitd's node join the tailnet through the same
 // federated identity it uses for the Tailscale API (TS_OAUTH_CLIENT_ID with
 // TS_ID_TOKEN), so no auth key is needed either. tsnet exchanges the ID
-// token for a one-off auth key tagged tag, which needs the federated
+// token for a single-use auth key tagged tag, which needs the federated
 // identity to have the auth_keys scope and tag.
 //
-// It does nothing once the node has joined (it keeps its key in the state
-// directory, and tsnet would otherwise mint a new auth key on every start),
-// when an auth key is set, when an OAuth client secret is set (the OAuth
-// client is used for the API then, and has no ID token), or without a client
-// ID and ID token.
+// It applies on every start, not only the first. tsnet uses the auth key
+// only when the node has to log in: a new node, or one whose key expired or
+// that was logged out, which then rejoins by itself; a running node ignores
+// it. And the node always advertises tag: starting without it would ask the
+// control server to drop the tag, which logs a tagged node out.
 //
-// It returns whether the node will join that way.
+// It does nothing when an auth key is set, when an OAuth client secret is
+// set (the OAuth client is used for the API then, and has no ID token), or
+// without a client ID and ID token.
+//
+// It returns whether the node joins that way.
 func federatedJoin(srv *tsnet.Server, tag string, getenv func(string) string) (bool, error) {
 	if getenv("TS_AUTHKEY") != "" || getenv("TS_AUTH_KEY") != "" || getenv("TS_OAUTH_CLIENT_SECRET") != "" {
 		return false, nil
-	}
-	if joined, err := nodeJoined(srv.Dir); err != nil || joined {
-		return false, err
 	}
 	id, tok := getenv("TS_OAUTH_CLIENT_ID"), getenv("TS_ID_TOKEN")
 	if id == "" || tok == "" {
@@ -48,28 +44,6 @@ func federatedJoin(srv *tsnet.Server, tag string, getenv func(string) string) (b
 	srv.IDToken = jwt
 	srv.AdvertiseTags = []string{tag}
 	return true, nil
-}
-
-// nodeJoined reports whether the tsnet state in dir has a logged-in node.
-// tailscaled saves the node's profile under "_profiles" only once it has
-// logged in, so a node that only ever reached NeedsLogin has none.
-func nodeJoined(dir string) (bool, error) {
-	b, err := os.ReadFile(filepath.Join(dir, "tailscaled.state"))
-	if errors.Is(err, fs.ErrNotExist) {
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-	var state map[string][]byte
-	if err := json.Unmarshal(b, &state); err != nil {
-		return false, fmt.Errorf("reading %s: %w", filepath.Join(dir, "tailscaled.state"), err)
-	}
-	var profiles map[string]json.RawMessage
-	if err := json.Unmarshal(state["_profiles"], &profiles); err != nil {
-		return false, nil
-	}
-	return len(profiles) > 0, nil
 }
 
 // withoutEnv runs fn with the variables keys unset, and sets them back

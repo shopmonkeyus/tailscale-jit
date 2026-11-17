@@ -424,10 +424,10 @@ used.
 
 The same federated identity can also join jitd's node to the tailnet, so it
 needs no auth key either. Give it the **Auth Keys** scope (write) with jitd's
-tag (`-tag`, `tag:jit` by default). On first start, with no node state and no
-`TS_AUTHKEY`, jitd exchanges the token for a one-off auth key with that tag;
-the node is not ephemeral and is preauthorized. Once joined, the node keeps
-its key in `-state-dir` and doesn't need it again.
+tag (`-tag`, `tag:jit` by default). Without `TS_AUTHKEY`, jitd exchanges the
+token for a single-use auth key with that tag on every start; the node is not
+ephemeral and is preauthorized. A running node ignores the key, and a node
+whose key expired or that was logged out rejoins with it by itself.
 
 The other tabs under Integrations (Slack, Okta, Google Groups) are optional and work the
 same way: steps, a form, and a test before anything is saved.

@@ -332,10 +332,9 @@ func main() {
 	}
 	log.Info("starting tsnet node", "hostname", *hostname, "state_dir", *stateDir, "auth_key_set", os.Getenv("TS_AUTHKEY") != "", "federated_identity", federated)
 	// tsnet reads TS_ID_TOKEN from the environment when IDToken is empty,
-	// and then fails without a client ID (a node that has already joined)
-	// or on a "file:" value. jitd's token is for its API client and is
-	// handed to tsnet by federatedJoin when the node joins, so tsnet never
-	// sees the variable. Nothing else runs yet.
+	// and then fails without a client ID or on a "file:" value. jitd's
+	// token is for its API client and federatedJoin hands it to tsnet
+	// itself, so tsnet never sees the variable. Nothing else runs yet.
 	st, err := withoutEnv([]string{"TS_ID_TOKEN"}, func() (*ipnstate.Status, error) { return srv.Up(ctx) })
 	if err != nil {
 		log.Error("tsnet up", "err", err)
