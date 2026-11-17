@@ -132,8 +132,10 @@ func main() {
 		if *envFile == "" {
 			return vars, nil
 		}
+		// A missing env file is no env file: the settings then come from
+		// the environment alone, as for Slack.
 		fromFile, err := setup.ReadEnvFile(*envFile)
-		if err != nil {
+		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			return nil, err
 		}
 		for _, k := range okta.CredentialVars {
@@ -218,8 +220,10 @@ func main() {
 		if *envFile == "" {
 			return vars, nil
 		}
+		// A missing env file is no env file: the settings then come from
+		// the environment alone, as for Slack.
 		fromFile, err := setup.ReadEnvFile(*envFile)
-		if err != nil {
+		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			return nil, err
 		}
 		if v := fromFile[google.EnvKey]; v != "" {
