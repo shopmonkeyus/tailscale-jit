@@ -210,9 +210,15 @@ type federatedTokenSource struct {
 }
 
 func (f *federatedTokenSource) readIDToken() (string, error) {
-	path, ok := strings.CutPrefix(f.idToken, "file:")
+	return ReadIDToken(f.idToken)
+}
+
+// ReadIDToken resolves a TS_ID_TOKEN value: the token itself, or
+// "file:<path>" to read it from a file.
+func ReadIDToken(v string) (string, error) {
+	path, ok := strings.CutPrefix(v, "file:")
 	if !ok {
-		return f.idToken, nil
+		return v, nil
 	}
 	b, err := os.ReadFile(path)
 	if err != nil {

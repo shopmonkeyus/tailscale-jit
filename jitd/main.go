@@ -320,7 +320,12 @@ func main() {
 	}
 	defer srv.Close()
 
-	log.Info("starting tsnet node", "hostname", *hostname, "state_dir", *stateDir, "auth_key_set", os.Getenv("TS_AUTHKEY") != "")
+	federated, err := federatedJoin(srv, *jitTag, os.Getenv)
+	if err != nil {
+		log.Error("federated identity for joining the tailnet", "err", err)
+		os.Exit(1)
+	}
+	log.Info("starting tsnet node", "hostname", *hostname, "state_dir", *stateDir, "auth_key_set", os.Getenv("TS_AUTHKEY") != "", "federated_identity", federated)
 	st, err := srv.Up(ctx)
 	if err != nil {
 		log.Error("tsnet up", "err", err)
